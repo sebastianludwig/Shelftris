@@ -1,0 +1,11 @@
+// clear
+{
+  "action": "clear"
+}
+
+// action
+{
+  "action": "add_brick",
+  "position": [2, 12],
+  
+}
