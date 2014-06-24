@@ -6,28 +6,58 @@ import random
 import colorsys
 from enum import Enum
 
+def column_wise(container):
+   for x_index, column in enumerate(container):
+      for y_index, value in enumerate(column):
+        yield (x_index, y_index, value)
+
+def row_wise(container):
+  row_wise = zip(*container)
+  for y_index, row in enumerate(row_wise):
+    for x_index, value in enumerate(row):
+      yield (x_index, y_index, value)
+
+def stringify(container):
+  s = ''
+  prev_y = None
+  for (x, y, color) in row_wise(container):
+    if prev_y is not None and y != prev_y:
+      s += '\n'
+    if color is not None:
+      brightness = int(color.brightness * 9)
+      s += ' ' if brightness == 0 else ("%d" % brightness)
+    else:
+      s += ' '
+    prev_y = y
+  return s
+
+
 class Color:
-  def __init__(self):
-    self.hue = 0
-    self.saturation = 0
-    self.brightness = 0
+  def __init__(self, hue = 0.0, saturation = 0.0, brightness = 0.0):
+    self.hue = float(hue)
+    self.saturation = float(saturation)
+    self.brightness = float(brightness)
 
   def __eq__(self, other):
+    if other is None: return False
     return self.hue == other.hue and self.saturation == other.saturation and self.brightness == other.brightness
 
   def __str__(self):
-    return str(self.hue)
+    return "h: %.1f s: %.1f b: %.1f" % (self.hue, self.saturation, self.brightness)
 
   def blend_towards(self, target_color, current_progress, new_progress):
     self.hue = self.__blend_value(self.hue, target_color.hue, current_progress, new_progress)
     self.saturation = self.__blend_value(self.saturation, target_color.saturation, current_progress, new_progress)
     self.brightness = self.__blend_value(self.brightness, target_color.brightness, current_progress, new_progress)
 
-  def __blend_value(current_value, target_value, current_progress, new_progress):
+  def __blend_value(self, current_value, target_value, current_progress, new_progress):
     progress_step = new_progress - current_progress
     remaining_difference = target_value - current_value
-    remaining_progress = 1 - current_progress
-    start_value = target_value - 1 / remaining_progress * remaining_difference
+    remaining_progress = 1.0 - current_progress
+    if remaining_progress < 0.0001:
+      return target_value
+
+    start_value = target_value - 1.0 / remaining_progress * remaining_difference
 
     total_difference = target_value - start_value
     step_difference = total_difference * progress_step
@@ -48,28 +78,6 @@ class Shape(Enum):
    Z = [[True, None], [True, True], [None, True]]
    S = [[None, True], [True, True], [True, None]]
    
-
-def column_wise(container):
-   for x_index, column in enumerate(container):
-      for y_index, value in enumerate(column):
-        yield (x_index, y_index, value)
-
-def row_wise(container):
-  row_wise = zip(*container)
-  for y_index, row in enumerate(row_wise):
-    for x_index, value in enumerate(row):
-      yield (x_index, y_index, value)
-
-def stringify(container):
-  s = ''
-  prev_y = None
-  for (x, y, color) in row_wise(container):
-    if prev_y is not None and y != prev_y:
-      s += '\n'
-    s += str(color) if color is not None else ' '
-    prev_y = y
-  return s
-
 
 class Brick:
   def __init__(self, shape, color, x, y):
@@ -200,37 +208,43 @@ class Game:
     return field.field
 
 
-class ConsoleView:
-  def __init__(self, game):
-    self.game = game
+class ConsoleStateView:
+  def __init__(self, stateful):
+    self.stateful = stateful
 
   def update(self, elapsed_time):
-    print(stringify(game.state()))
+    print(stringify(self.stateful.state()))
 
 class ColorBlendingView:
   def __init__(self, game):
     self.game = game
-    self.blend_time = 2
+    self.blend_time = 1
     self.current_state = game.state()
     self.previous_target = game.state()
     self.blend_progress = game.state()
     for (x, y, ignore) in column_wise(self.current_state):
       self.current_state[x][y] = None
       self.previous_target[x][y] = None
-      self.blend_progress = 0
+      self.blend_progress[x][y] = 0
 
   def update(self, elapsed_time):
-    # have internal 2d array of colors
-    # interate over self.game.state and blend h,s and b
-    for (x, y, current_color) in self.current_state:
-      target_color = self.game.state[x][y]
-      if self.previous_target[x][y] != target:
+    for (x, y, current_color) in column_wise(self.current_state):
+      target_color = self.game.state()[x][y]
+      if self.previous_target[x][y] != target_color:
         self.blend_progress[x][y] = 0
         self.previous_target[x][y] = target_color
 
-      if current_color == target_color: continue
+      if current_color == target_color:
+        continue
 
-      progress = min(self.blend_progress[x][y] + self.blend_time / elapsed_time, 1)
+      if target_color is None:
+        target_color = Color(hue = current_color.hue, saturation = current_color.saturation, brightness = 0)
+
+      if current_color is None:
+        current_color = Color(hue = target_color.hue, saturation = target_color.saturation, brightness = 0)
+        self.current_state[x][y] = current_color
+
+      progress = min(self.blend_progress[x][y] + elapsed_time / self.blend_time, 1)
       current_color.blend_towards(target_color, self.blend_progress[x][y], progress)
       self.blend_progress[x][y] = progress
 
@@ -252,37 +266,43 @@ class RGBStripDriver:
 
       self.previous_state[x][y] = color
 
-game = Game()
-consoleView = ConsoleView(game)
-colorView = ColorBlendingView(game)
-driver = RGBStripDriver(colorView)
+
+def runGame():
+  game = Game()
+  colorView = ColorBlendingView(game)
+  consoleView = ConsoleStateView(colorView)
+  driver = RGBStripDriver(colorView)
 
 
-# TODO remove
-random.seed(15)
+  # TODO remove
+  random.seed(15)
 
-colors = [Color()]
+  colors = [Color(1, 1, 1)]
 
-i = 0
-last_update = time.time()
-while True:
-  try:
-    if i % 3 == 0:
-      x = random.randrange(6)
-      y = 0 #random.randrange(10)
-      b = Brick(random.choice(list(Shape)), random.choice(colors), x, y)
-      b.gravity_affected = True
-      game.place_brick(b)
+  i = 0
+  last_update = time.time()
+  while True:
+    try:
+      if i % 3 == 0:
+        x = random.randrange(6)
+        y = 0 #random.randrange(10)
+        b = Brick(random.choice(list(Shape)), random.choice(colors), x, y)
+        b.gravity_affected = True
+        game.place_brick(b)
 
-    now = time.time()
-    elapsed_time = now - last_update
-    # TODO call at different rates (view faster than the game)
-    game.update(elapsed_time)
-    consoleView.update(elapsed_time)
-    driver.update(elapsed_time)
-    last_update = now
+      now = time.time()
+      elapsed_time = now - last_update
+      # TODO call at different rates (view faster than the game)
+      game.update(elapsed_time)
+      consoleView.update(elapsed_time)
+      colorView.update(elapsed_time)
+      driver.update(elapsed_time)
+      last_update = now
 
-    time.sleep(0.5)
-    i += 1
-  except (KeyboardInterrupt, SystemExit):
-    break
+      time.sleep(0.5)
+      i += 1
+    except (KeyboardInterrupt, SystemExit):
+      break
+
+if __name__ == '__main__':
+  runGame()
