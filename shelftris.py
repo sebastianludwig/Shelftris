@@ -5,6 +5,7 @@ import copy
 import random
 import colorsys
 from enum import Enum
+from termcolor import colored
 
 def column_wise(container):
    for x_index, column in enumerate(container):
@@ -25,7 +26,16 @@ def stringify(container):
       s += '\n'
     if color is not None:
       brightness = int(color.brightness * 9)
-      s += ' ' if brightness == 0 else ("%d" % brightness)
+      if brightness == 0:
+        s += ' '
+      else:
+        text = "%d" % brightness
+        attrs = []
+        if brightness > 6:
+          attrs = ['reverse']
+        elif brightness <=3:
+          attrs = ['dark']
+        s += colored(text, 'green', attrs = attrs)
     else:
       s += ' '
     prev_y = y
