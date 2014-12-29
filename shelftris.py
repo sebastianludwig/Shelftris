@@ -18,13 +18,19 @@ def row_wise(container):
         for x_index, value in enumerate(row):
             yield (x_index, y_index, value)
 
-def stringify(container):
+def stringify(container, vertical_border = '', horizontal_border = ''):
     s = ''
+    if len(horizontal_border) > 0:
+        s += vertical_border + horizontal_border * len(container) + vertical_border + '\n'
+    if len(vertical_border) > 0:
+        s += vertical_border
     prev_y = None
     for (x, y, color) in row_wise(container):
         if prev_y is not None and y != prev_y:
-            s += '\n'
-        if color is not None:
+            s += vertical_border + '\n' + vertical_border
+        if color is None:
+            s += ' '
+        else:
             brightness = int(color.brightness * 9)
             if brightness == 0:
                 s += ' '
@@ -38,9 +44,12 @@ def stringify(container):
                 color = 'red' if color.hue > 0.6 else 'green'
                 #s += colored(text, color, attrs = attrs)
                 s += str(brightness)
-        else:
-            s += ' '
+            
         prev_y = y
+    if len(vertical_border) > 0:
+        s += vertical_border
+    if len(horizontal_border) > 0:
+        s += '\n' + vertical_border + horizontal_border * len(container) + vertical_border
     return s
 
 
@@ -260,15 +269,16 @@ class Game:
 
 
 class ConsoleStateView:
-    def __init__(self, stateful):
+    def __init__(self, stateful, in_place = False):
         self.stateful = stateful
         self._needs_jump = False
+        self.in_place = in_place
 
     def update(self, elapsed_time):
-        if self._needs_jump:
-                print("\033[%dA" % (self.stateful.height + 1))
-        print(stringify(self.stateful.state()))
-        # self._needs_jump = True
+        if self.in_place and self._needs_jump:
+            print("\033[%dA" % (len(self.stateful.state()[0]) + 3))
+        print(stringify(self.stateful.state(), vertical_border = '|', horizontal_border = '-'))
+        self._needs_jump = True
 
 class ColorBlendingView:
     def __init__(self, game):
@@ -334,7 +344,7 @@ def runGame():
     game = Game(9, 14)
     colorView = ColorBlendingView(game)
     driver = RGBStripDriver(colorView)
-    consoleView = ConsoleStateView(colorView)
+    consoleView = ConsoleStateView(game, in_place = True)
     
 
     # TODO remove
