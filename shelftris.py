@@ -184,8 +184,8 @@ class Field:
       self.field[brick.x + x][brick.y + y] = color
 
 class Game:
-  def __init__(self):
-    self.field = Field(9, 14)
+  def __init__(self, width, height):
+    self.field = Field(width, height)
     self.bricks = []
   
   def update(self, elapsed_time):
@@ -294,7 +294,7 @@ class RGBStripDriver:
 
 
 def runGame():
-  game = Game()
+  game = Game(9, 14)
   colorView = ColorBlendingView(game)
   consoleView = ConsoleStateView(colorView)
   driver = RGBStripDriver(colorView)
