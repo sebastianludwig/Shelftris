@@ -187,7 +187,38 @@ class Game:
   def __init__(self, width, height):
     self.field = Field(width, height)
     self.bricks = []
-  
+    self.views = []
+
+  def loop(self):
+    colors = [Color(1, 1, 1), Color(0.5, 1, 1)]
+
+    i = 0
+    last_update = time.time()
+    while True:
+      try:
+        if i % 3 == 0:
+          shape = random.choice(list(Shape))
+          x = random.randrange(self.field.width - len(shape.value))
+          y = 0
+          brick = Brick(shape, random.choice(colors), x, y)
+          brick.gravity_affected = True
+          self.place_brick(brick)
+
+        now = time.time()
+        elapsed_time = now - last_update
+        # TODO call at different rates (view faster than the game)
+        self.update(elapsed_time)
+        for view in self.views:
+          view.update(elapsed_time)
+
+        last_update = now
+
+        time.sleep(1)
+        i += 1
+      except (KeyboardInterrupt, SystemExit):
+        break
+
+
   def update(self, elapsed_time):
     to_remove = []
     for brick in self.bricks:
@@ -296,39 +327,15 @@ class RGBStripDriver:
 def runGame():
   game = Game(9, 14)
   colorView = ColorBlendingView(game)
-  consoleView = ConsoleStateView(colorView)
   driver = RGBStripDriver(colorView)
-
+  consoleView = ConsoleStateView(colorView)
+  
 
   # TODO remove
-  random.seed(15)
+  random.seed(10)
 
-  colors = [Color(1, 1, 1)]
-
-  i = 0
-  last_update = time.time()
-  while True:
-    try:
-      if i % 3 == 0:
-        x = random.randrange(6)
-        y = 0 #random.randrange(10)
-        b = Brick(random.choice(list(Shape)), random.choice(colors), x, y)
-        b.gravity_affected = True
-        game.place_brick(b)
-
-      now = time.time()
-      elapsed_time = now - last_update
-      # TODO call at different rates (view faster than the game)
-      game.update(elapsed_time)
-      consoleView.update(elapsed_time)
-      colorView.update(elapsed_time)
-      driver.update(elapsed_time)
-      last_update = now
-
-      time.sleep(0.5)
-      i += 1
-    except (KeyboardInterrupt, SystemExit):
-      break
+  game.views += [colorView, consoleView, driver]
+  game.loop()
 
 if __name__ == '__main__':
   runGame()
