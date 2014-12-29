@@ -179,8 +179,8 @@ class Field:
     # transfer brick.pattern to target
     for (x, y, color) in column_wise(brick.pattern):
       if color is None: continue
-      if brick.x + x < 0 or brick.x + x > self.width: continue
-      if brick.y + y < 0 or brick.y + y > self.height: continue
+      if brick.x + x < 0 or brick.x + x >= self.width: continue
+      if brick.y + y < 0 or brick.y + y >= self.height: continue
       self.field[brick.x + x][brick.y + y] = color
 
 class Game:
