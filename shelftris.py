@@ -90,6 +90,7 @@ class Color:
     def hsb(self):
         return (self.hue, self.saturation, self.brightness)
 
+
 class Shape(Enum):
      T = [[True, None], [True, True], [True, None]]
      O = [[True, True], [True, True]]
@@ -194,6 +195,7 @@ class Field:
             if brick.y + y < 0 or brick.y + y >= self.height: continue
             self.field[brick.x + x][brick.y + y] = color
 
+
 class Game:
     def __init__(self, width, height):
         self.field = Field(width, height)
@@ -229,14 +231,14 @@ class Game:
             except (KeyboardInterrupt, SystemExit):
                 break
 
-
     def update(self, elapsed_time):
         to_remove = []
         for brick in self.bricks:
             new_position = (brick.x, brick.y +1)
             if self.field.can_move(brick, new_position):
                 brick.position = new_position
-                if self.field.is_outside(brick): to_remove.append(brick)
+                if self.field.is_outside(brick): 
+                    to_remove.append(brick)
             else:
                 self.field.merge(brick)
                 to_remove.append(brick)
@@ -279,6 +281,7 @@ class ConsoleStateView:
             print("\033[%dA" % (len(self.stateful.state()[0]) + 3))
         print(stringify(self.stateful.state(), vertical_border = '|', horizontal_border = '-'))
         self._needs_jump = True
+
 
 class ColorBlendingView:
     def __init__(self, game):
@@ -323,6 +326,7 @@ class ColorBlendingView:
 
     def state(self):
         return copy.deepcopy(self.current_state)
+
 
 class RGBStripDriver:
     def __init__(self, view):
