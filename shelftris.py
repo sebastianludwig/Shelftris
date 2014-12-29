@@ -168,6 +168,7 @@ class Field:
             color.brightness = brightness
 
     def can_move(self, brick, new_position):
+        # return True
         if (new_position[0] < 0 or
                 new_position[0] + brick.width  > self.width or
                 new_position[1] + brick.height > self.height):
@@ -237,10 +238,11 @@ class Game:
             new_position = (brick.x, brick.y +1)
             if self.field.can_move(brick, new_position):
                 brick.position = new_position
-                if self.field.is_outside(brick): 
-                    to_remove.append(brick)
             else:
                 self.field.merge(brick)
+                to_remove.append(brick)
+
+            if self.field.is_outside(brick):
                 to_remove.append(brick)
         for brick in to_remove:
             self.bricks.remove(brick)
