@@ -262,9 +262,13 @@ class Game:
 class ConsoleStateView:
   def __init__(self, stateful):
     self.stateful = stateful
+    self._needs_jump = False
 
   def update(self, elapsed_time):
+    if self._needs_jump:
+        print("\033[%dA" % (self.stateful.height + 1))
     print(stringify(self.stateful.state()))
+    # self._needs_jump = True
 
 class ColorBlendingView:
   def __init__(self, game):
