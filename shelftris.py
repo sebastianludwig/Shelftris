@@ -164,6 +164,13 @@ class Field:
       if color is None: continue
       if self.field[new_position[0] + x][new_position[1] + y] is not None: return False
     return True
+
+  def is_outside(self, brick):
+    if (brick.position[0] + brick.width < 0 or
+        brick.position[0] > self.width or
+        brick.position[1] > self.height):
+      return True
+    return False
   
   def __str__(self):
     return stringify(self.field)
@@ -187,6 +194,7 @@ class Game:
       new_position = (brick.x, brick.y +1)
       if self.field.can_move(brick, new_position):
         brick.position = new_position
+        if self.field.is_outside(brick): to_remove.append(brick)
       else:
         self.field.merge(brick)
         to_remove.append(brick)
