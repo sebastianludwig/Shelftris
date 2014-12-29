@@ -245,6 +245,14 @@ class ColorBlendingView:
       self.previous_target[x][y] = None
       self.blend_progress[x][y] = 0
 
+  @property
+  def width(self):
+    return len(self.current_state)
+  
+  @property
+  def height(self):
+    return len(self.current_state[0])
+
   def update(self, elapsed_time):
     for (x, y, current_color) in column_wise(self.current_state):
       target_color = self.game.state()[x][y]
