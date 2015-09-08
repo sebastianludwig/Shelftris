@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import yaml
-import logging
-import logging.config
-import os
+
 import time
 import copy
 import random
 import colorsys
+import signal
+import asyncio
 from enum import Enum
 # from termcolor import colored
 
@@ -194,25 +193,28 @@ class Field:
 
 
 class Game:
-    def __init__(self, width, height):
+    def __init__(self, width, height, logger=None):
         self.field = Field(width, height)
         self.bricks = []
         self.views = []
+        self.logger = logger
 
+    @asyncio.coroutine
     def loop(self):
-        last_update = time.time()
+        event_loop = asyncio.get_event_loop()
+        last_update = event_loop.time()
         while True:
             try:
-                now = time.time()
+                now = event_loop.time()
                 elapsed_time = now - last_update
-                # TODO call at different rates (view faster than the game)
+                # TODO call at different rates (view faster than the game) -> Make all update methods coroutines and register them..
                 self.update(elapsed_time)
                 for view in self.views:
                     view.update(elapsed_time)
 
                 last_update = now
 
-                time.sleep(1)
+                yield from asyncio.sleep(1)
             except (KeyboardInterrupt, SystemExit):
                 break
 
@@ -312,34 +314,3 @@ class ColorBlendingView:
 
     def state(self):
         return copy.deepcopy(self.current_state)
-
-
-
-def runGame():
-    with open(helper.relative_path('..', 'conf', 'logging_conf.yaml')) as f:
-        logging.config.dictConfig(yaml.load(f))
-
-    logger = logging.getLogger('debug')
-
-    game = Game(2, 4)
-    colorView = ColorBlendingView(game)
-    driver = IKEAShelf(colorView, logger=logger)
-    consoleView = ConsoleStateView(game, in_place=True)
-    
-    color = Color(0.5, 1, 1)
-    brick = Brick(Shape.T, color, 0, 0)
-    brick.rotate_cw()
-    game.place_brick(brick)
-    #     shape = random.choice(list(Shape))
-    #     x = random.randrange(self.field.width - len(shape.value))
-    #     y = 0
-    #     brick = Brick(shape, random.choice(colors), x, y)
-    #     brick.gravity_affected = True
-    #     self.place_brick(brick)
-
-
-    game.views += [colorView, consoleView, driver]
-    game.loop()
-
-if __name__ == '__main__':
-    runGame()
