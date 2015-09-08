@@ -1,5 +1,6 @@
 import asyncio
 from aiohttp import web
+from shelftris import *
 
 class WebServer:
     def __init__(self, loop, logger=None):
@@ -45,9 +46,14 @@ class WebServer:
 
     @asyncio.coroutine
     def _handle(self, request):
-        if self.logger is not None:
-            self.logger.error("waat!")
+        color = Color(0.5, 1, 1)
+        brick = Brick(Shape.T, color, 0, 0)
+        brick.gravity_affected = False
+        brick.rotate_cw()
+        if self.game is not None:
+            self.game.place_brick(brick)
+            return web.HTTPOk()
 
-        name = request.match_info.get('name', "Anonymous")
-        text = "Hello, " + name
-        return web.Response(body=text.encode('utf-8'))
+        return web.HTTPNotFound()
+
+        

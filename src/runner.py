@@ -26,11 +26,6 @@ def main():
     driver = IKEAShelf(colorView, logger=logger)
     consoleView = ConsoleStateView(game, in_place=True)
     
-    color = Color(0.5, 1, 1)
-    brick = Brick(Shape.T, color, 0, 0)
-    brick.gravity_affected = False
-    brick.rotate_cw()
-    game.place_brick(brick)
     #     shape = random.choice(list(Shape))
     #     x = random.randrange(self.field.width - len(shape.value))
     #     y = 0
