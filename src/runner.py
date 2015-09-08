@@ -6,6 +6,7 @@ import logging.config
 import yaml
 
 from shelftris import *
+from webserver import WebServer
 
 
 def main():
@@ -20,13 +21,14 @@ def main():
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, loop.stop)
 
-    game = Game(2, 4, logger=logger)
+    game = Game(2, 4, loop=loop, logger=logger)
     colorView = ColorBlendingView(game)
     driver = IKEAShelf(colorView, logger=logger)
     consoleView = ConsoleStateView(game, in_place=True)
     
     color = Color(0.5, 1, 1)
     brick = Brick(Shape.T, color, 0, 0)
+    brick.gravity_affected = False
     brick.rotate_cw()
     game.place_brick(brick)
     #     shape = random.choice(list(Shape))
@@ -40,8 +42,13 @@ def main():
     game.views += [colorView, consoleView, driver]
 
     asyncio.async(game.loop())
+
+    server = WebServer(loop=loop, logger=logger)
+    server.game = game
+
     try:
-        loop.run_forever()
+        with server:
+            loop.run_forever()
     finally:
         loop.close()
 

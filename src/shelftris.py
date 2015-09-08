@@ -193,19 +193,19 @@ class Field:
 
 
 class Game:
-    def __init__(self, width, height, logger=None):
+    def __init__(self, width, height, loop, logger=None):
         self.field = Field(width, height)
         self.bricks = []
         self.views = []
         self.logger = logger
+        self._event_loop = loop
 
     @asyncio.coroutine
     def loop(self):
-        event_loop = asyncio.get_event_loop()
-        last_update = event_loop.time()
+        last_update = self._event_loop.time()
         while True:
             try:
-                now = event_loop.time()
+                now = self._event_loop.time()
                 elapsed_time = now - last_update
                 # TODO call at different rates (view faster than the game) -> Make all update methods coroutines and register them..
                 self.update(elapsed_time)
