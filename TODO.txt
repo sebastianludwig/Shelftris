@@ -1,11 +1,78 @@
+asyncio
+server
+
+
+https://www.modmypi.com/adafruit-24-channel-12-bit-pwm-led-driver?filter_name=24%20channel
+http://makezine.com/projects/make-36-boards/android-arduino-led-strip-lights/
+http://www.instructables.com/id/PWM-an-RGB-LED-Strip-with-Arduino/?ALLSTEPS
+http://www.jerome-bernard.com/blog/2013/01/12/rgb-led-strip-controlled-by-an-arduino/
+https://learn.adafruit.com/rgb-led-strips/usage
+
+datasheet: http://www.st.com/web/en/resource/technical/document/datasheet/CD00002501.pdf
+Better(?) strips: http://sirs-e.com/shop/5050-double-density-led-strips/bled-strip-lights-5050-led-rgb-dd-high-quality/
+
+SPI
+Python3
+Webserver (flink?)
+
 // clear
 {
   "action": "clear"
 }
 
-// action
 {
   "action": "add_brick",
-  "position": [2, 12],
+  "origin": {"x": 2, "y": 12},
   
 }
+
+{
+  "action": "set_hue",
+  "hue": 0.3,
+  "cells": [
+    {"x": 0, "y": 1},
+    {"x": 2, "y": 1}
+  ]
+}
+
+DONE
+
+π: install python 3.4
+π: Compile python-smbus for Python3 (http://procrastinative.ninja/2014/07/21/smbus-for-python34-on-raspberry/)
+π: Configure I2C (https://learn.adafruit.com/adafruits-raspberry-pi-lesson-4-gpio-setup/configuring-i2c)
+  - connect 16 channel 12 bit servo driver (http://www.adafruit.com/products/815)
+  - add "i2c-bcm2708" and "i2c-dev" to /etc/modules
+  - sudo apt-get install "python-smbus" and "i2c-tools"
+  - comment out "spi-bcm2708" and "i2c-bcm2708" in /etc/modprobe.d/raspi-blacklist.conf (if it exists)
+  -> `sudo i2cdetect -y 1` should detect something (not an empty table, probably 40 & 70)
+
+
+
+
+
+
+
+
+
+
+
+
+
+Blog Post
+
+# Idea
+Trying to establish a game theme in my flat. Ordinary, boring IKEA shelf - but with square <<Fächer>> -> looks like Tetris.
+
+Unfortunately I couldn't fit a larger shelf, so my game area is only 2x4.
+
+# Overview
+RaspberryPi to control LED strips, web API to accept JSON commands, iOS client
+
+# Hardware
+8 compartments, three channels -> SPI -> [was a complete fail]()
+
+Use two I2C PCA8625(?) boards. The server software is written in Python. [I've written about installing Python3 before]().
+
+There are a few resources out there how to connect a LED strip to Arduino/Raspberry..? The transistor isn't TTL compatible and is specified with a threthold voltage of 2 to 4 V. So the supplied 3.3V of the PCAxxxx isn't enough to ensure it switches properly.
+
+-> Small BC337/547 amplifier circuits - side effect: they also invert, but it's possible to (mostly) deal with that in software.
