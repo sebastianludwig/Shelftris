@@ -21,10 +21,10 @@ def main():
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, loop.stop)
 
-    game = Game(2, 4, loop=loop, logger=logger)
-    colorView = ColorBlendingView(game)
-    driver = IKEAShelf(colorView, logger=logger)
-    consoleView = ConsoleStateView(game, in_place=True)
+    game = Game(loop, 2, 4, logger=logger)
+    colorView = ColorBlendingView(loop, game)
+    driver = IKEAShelf(loop, colorView, logger=logger)
+    consoleView = ConsoleStateView(loop, game, in_place=True)
     
     #     shape = random.choice(list(Shape))
     #     x = random.randrange(self.field.width - len(shape.value))
@@ -32,11 +32,6 @@ def main():
     #     brick = Brick(shape, random.choice(colors), x, y)
     #     brick.gravity_affected = True
     #     self.place_brick(brick)
-
-
-    game.views += [colorView, consoleView, driver]
-
-    asyncio.async(game.loop())
 
     server = WebServer(loop=loop, logger=logger)
     server.game = game

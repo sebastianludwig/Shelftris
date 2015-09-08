@@ -4,11 +4,11 @@ from shelftris import *
 
 class WebServer:
     def __init__(self, loop, logger=None):
+        self._loop = loop
         self.ip = '0.0.0.0'
         self.port = 80
         self.game = None
         self.logger = logger
-        self._loop = loop
 
         self._app = web.Application(loop=self._loop)
         self._app.router.add_route('GET', '/command', self._handle)

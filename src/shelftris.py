@@ -193,45 +193,33 @@ class Field:
 
 
 class Game:
-    def __init__(self, width, height, loop, logger=None):
+    def __init__(self, loop, width, height, logger=None):
+        self._loop = loop
         self.field = Field(width, height)
         self.bricks = []
-        self.views = []
         self.logger = logger
-        self._event_loop = loop
+        self.update_interval = 1
+
+        asyncio.async(self.update(), loop=loop)
 
     @asyncio.coroutine
-    def loop(self):
-        last_update = self._event_loop.time()
+    def update(self):
         while True:
-            try:
-                now = self._event_loop.time()
-                elapsed_time = now - last_update
-                # TODO call at different rates (view faster than the game) -> Make all update methods coroutines and register them..
-                self.update(elapsed_time)
-                for view in self.views:
-                    view.update(elapsed_time)
+            to_remove = []
+            for brick in self.bricks:
+                new_position = (brick.x, brick.y +1)
+                if self.field.can_move(brick, new_position):
+                    brick.position = new_position
+                else:
+                    self.field.merge(brick)
+                    to_remove.append(brick)
 
-                last_update = now
+                if self.field.is_outside(brick):
+                    to_remove.append(brick)
+            for brick in to_remove:
+                self.bricks.remove(brick)
 
-                yield from asyncio.sleep(1)
-            except (KeyboardInterrupt, SystemExit):
-                break
-
-    def update(self, elapsed_time):
-        to_remove = []
-        for brick in self.bricks:
-            new_position = (brick.x, brick.y +1)
-            if self.field.can_move(brick, new_position):
-                brick.position = new_position
-            else:
-                self.field.merge(brick)
-                to_remove.append(brick)
-
-            if self.field.is_outside(brick):
-                to_remove.append(brick)
-        for brick in to_remove:
-            self.bricks.remove(brick)
+            yield from asyncio.sleep(self.update_interval)
         
     def place_brick(self, brick):
         if brick.gravity_affected:
@@ -259,22 +247,30 @@ class Game:
 
 
 class ConsoleStateView:
-    def __init__(self, stateful, in_place = False):
+    def __init__(self, loop, stateful, in_place=False):
         self.stateful = stateful
         self._needs_jump = False
         self.in_place = in_place
+        
+        asyncio.async(self.update(), loop=loop)
 
-    def update(self, elapsed_time):
-        if self.in_place and self._needs_jump:
-            print("\033[%dA" % (len(self.stateful.state()[0]) + 3))
-        print(stringify(self.stateful.state(), vertical_border = '|', horizontal_border = '-'))
-        self._needs_jump = True
+    @asyncio.coroutine
+    def update(self):
+        while True:
+            if self.in_place and self._needs_jump:
+                print("\033[%dA" % (len(self.stateful.state()[0]) + 3))
+            print(stringify(self.stateful.state(), vertical_border = '|', horizontal_border = '-'))
+            self._needs_jump = True
+
+            yield from asyncio.sleep(0.5)
 
 
 class ColorBlendingView:
-    def __init__(self, game):
+    def __init__(self, loop, game):
+        self._loop = loop
         self.game = game
-        self.blend_time = 5
+        self.update_interval = 0.05
+        self.blend_time = 15
         self.current_state = game.state()
         self.previous_target = game.state()
         self.blend_progress = game.state()
@@ -282,6 +278,8 @@ class ColorBlendingView:
             self.current_state[x][y] = None
             self.previous_target[x][y] = None
             self.blend_progress[x][y] = 0
+
+        asyncio.async(self.update(), loop=loop)
 
     @property
     def width(self):
@@ -291,26 +289,34 @@ class ColorBlendingView:
     def height(self):
         return len(self.current_state[0])
 
-    def update(self, elapsed_time):
-        for (x, y, current_color) in helper.column_wise(self.current_state):
-            target_color = self.game.state()[x][y]
-            if self.previous_target[x][y] != target_color:
-                self.blend_progress[x][y] = 0
-                self.previous_target[x][y] = target_color
+    @asyncio.coroutine
+    def update(self):
+        last_update = self._loop.time()
+        while True:
+            now = self._loop.time()
+            elapsed_time = now - last_update
+            for (x, y, current_color) in helper.column_wise(self.current_state):
+                target_color = self.game.state()[x][y]
+                if self.previous_target[x][y] != target_color:
+                    self.blend_progress[x][y] = 0
+                    self.previous_target[x][y] = target_color
 
-            if current_color == target_color:
-                continue
+                if current_color == target_color:
+                    continue
 
-            if target_color is None:
-                target_color = Color(hue = current_color.hue, saturation = current_color.saturation, brightness = 0)
+                if target_color is None:
+                    target_color = Color(hue = current_color.hue, saturation = current_color.saturation, brightness = 0)
 
-            if current_color is None:
-                current_color = Color(hue = target_color.hue, saturation = target_color.saturation, brightness = 0)
-                self.current_state[x][y] = current_color
+                if current_color is None:
+                    current_color = Color(hue = target_color.hue, saturation = target_color.saturation, brightness = 0)
+                    self.current_state[x][y] = current_color
 
-            progress = min(self.blend_progress[x][y] + elapsed_time / self.blend_time, 1)
-            current_color.blend_towards(target_color, self.blend_progress[x][y], progress)
-            self.blend_progress[x][y] = progress
+                progress = min(self.blend_progress[x][y] + elapsed_time / self.blend_time, 1)
+                current_color.blend_towards(target_color, self.blend_progress[x][y], progress)
+                self.blend_progress[x][y] = progress
+
+            last_update = now
+            yield from asyncio.sleep(self.update_interval)
 
     def state(self):
         return copy.deepcopy(self.current_state)
