@@ -274,7 +274,7 @@ class ConsoleStateView:
 class ColorBlendingView:
     def __init__(self, game):
         self.game = game
-        self.blend_time = 1
+        self.blend_time = 5
         self.current_state = game.state()
         self.previous_target = game.state()
         self.blend_progress = game.state()
