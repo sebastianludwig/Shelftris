@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+import yaml
+import logging
+import logging.config
+import os
 import time
 import copy
 import random
@@ -7,16 +11,8 @@ import colorsys
 from enum import Enum
 # from termcolor import colored
 
-def column_wise(container):
-     for x_index, column in enumerate(container):
-            for y_index, value in enumerate(column):
-                yield (x_index, y_index, value)
-
-def row_wise(container):
-    row_wise = zip(*container)
-    for y_index, row in enumerate(row_wise):
-        for x_index, value in enumerate(row):
-            yield (x_index, y_index, value)
+import helper
+from hardware import IKEAShelf
 
 def stringify(container, vertical_border = '', horizontal_border = ''):
     s = ''
@@ -25,7 +21,7 @@ def stringify(container, vertical_border = '', horizontal_border = ''):
     if len(vertical_border) > 0:
         s += vertical_border
     prev_y = None
-    for (x, y, color) in row_wise(container):
+    for (x, y, color) in helper.row_wise(container):
         if prev_y is not None and y != prev_y:
             s += vertical_border + '\n' + vertical_border
         if color is None:
@@ -107,7 +103,7 @@ class Brick:
         self.position = (x, y)
         self.gravity_affected = True
         self.pattern = copy.deepcopy(shape.value)
-        for (x, y, value) in column_wise(self.pattern):
+        for (x, y, value) in helper.column_wise(self.pattern):
             if value is None: continue
             self.pattern[x][y] = color
         
@@ -128,28 +124,28 @@ class Brick:
         return len(self.pattern[0])
 
     def set_saturation(self, saturation):
-        for (x, y, color) in column_wise(self.pattern):
+        for (x, y, color) in helper.column_wise(self.pattern):
             color.saturation = saturation
 
     def set_brightness(self, brightness):
-        for (x, y, color) in column_wise(self.pattern):
+        for (x, y, color) in helper.column_wise(self.pattern):
             color.brightness = brightness
     
     def __str__(self):
         return stringify(self.pattern)
 
     def rotate_cw(self):
-        self.pattern = zip(*self.pattern)
+        self.pattern = list(zip(*self.pattern))
         self.pattern.reverse()
 
     def rotate_ccw(self):
         self.pattern.reverse()
-        self.pattern = zip(*self.pattern)
+        self.pattern = list(zip(*self.pattern))
 
 
 class Field:
     def __init__(self, width, height):
-        self.field = [[None for _ in range(height)] for _ in range(width)]
+        self.field = helper.array_2d(width, height)
     
     @property
     def width(self):
@@ -160,11 +156,11 @@ class Field:
         return len(self.field[0])
 
     def set_all_saturation(self, saturation):
-        for (x, y, color) in column_wise(self.field):
+        for (x, y, color) in helper.column_wise(self.field):
             color.saturation = saturation
 
     def set_all_brightness(self, brightness):
-        for (x, y, color) in column_wise(self.field):
+        for (x, y, color) in helper.column_wise(self.field):
             color.brightness = brightness
 
     def can_move(self, brick, new_position):
@@ -173,7 +169,7 @@ class Field:
                 new_position[0] + brick.width  > self.width or
                 new_position[1] + brick.height > self.height):
             return False
-        for (x, y, color) in column_wise(brick.pattern):
+        for (x, y, color) in helper.column_wise(brick.pattern):
             if color is None: continue
             if self.field[new_position[0] + x][new_position[1] + y] is not None: return False
         return True
@@ -190,7 +186,7 @@ class Field:
     
     def merge(self, brick):
         # transfer brick.pattern to target
-        for (x, y, color) in column_wise(brick.pattern):
+        for (x, y, color) in helper.column_wise(brick.pattern):
             if color is None: continue
             if brick.x + x < 0 or brick.x + x >= self.width: continue
             if brick.y + y < 0 or brick.y + y >= self.height: continue
@@ -204,20 +200,9 @@ class Game:
         self.views = []
 
     def loop(self):
-        colors = [Color(1, 1, 1), Color(0.5, 1, 1)]
-
-        i = 0
         last_update = time.time()
         while True:
             try:
-                if i % 3 == 0:
-                    shape = random.choice(list(Shape))
-                    x = random.randrange(self.field.width - len(shape.value))
-                    y = 0
-                    brick = Brick(shape, random.choice(colors), x, y)
-                    brick.gravity_affected = True
-                    self.place_brick(brick)
-
                 now = time.time()
                 elapsed_time = now - last_update
                 # TODO call at different rates (view faster than the game)
@@ -228,7 +213,6 @@ class Game:
                 last_update = now
 
                 time.sleep(1)
-                i += 1
             except (KeyboardInterrupt, SystemExit):
                 break
 
@@ -292,7 +276,7 @@ class ColorBlendingView:
         self.current_state = game.state()
         self.previous_target = game.state()
         self.blend_progress = game.state()
-        for (x, y, ignore) in column_wise(self.current_state):
+        for (x, y, _) in helper.column_wise(self.current_state):
             self.current_state[x][y] = None
             self.previous_target[x][y] = None
             self.blend_progress[x][y] = 0
@@ -306,7 +290,7 @@ class ColorBlendingView:
         return len(self.current_state[0])
 
     def update(self, elapsed_time):
-        for (x, y, current_color) in column_wise(self.current_state):
+        for (x, y, current_color) in helper.column_wise(self.current_state):
             target_color = self.game.state()[x][y]
             if self.previous_target[x][y] != target_color:
                 self.blend_progress[x][y] = 0
@@ -330,31 +314,29 @@ class ColorBlendingView:
         return copy.deepcopy(self.current_state)
 
 
-class RGBStripDriver:
-    def __init__(self, view):
-        self.view = view
-        self.previous_state = self.view.state()
-        for (x, y, ignored) in column_wise(self.previous_state):
-            self.previous_state[x][y] = None
-
-    def update(self, elapsed_time):
-        for (x, y, color) in row_wise(self.view.state()):
-            if color == self.previous_state[x][y]: continue
-
-            # TODO issue command to extension board
-
-            self.previous_state[x][y] = color
-
 
 def runGame():
-    game = Game(9, 14)
-    colorView = ColorBlendingView(game)
-    driver = RGBStripDriver(colorView)
-    consoleView = ConsoleStateView(game, in_place = True)
-    
+    with open(helper.relative_path('..', 'conf', 'logging_conf.yaml')) as f:
+        logging.config.dictConfig(yaml.load(f))
 
-    # TODO remove
-    random.seed(10)
+    logger = logging.getLogger('debug')
+
+    game = Game(2, 4)
+    colorView = ColorBlendingView(game)
+    driver = IKEAShelf(colorView, logger=logger)
+    consoleView = ConsoleStateView(game, in_place=True)
+    
+    color = Color(0.5, 1, 1)
+    brick = Brick(Shape.T, color, 0, 0)
+    brick.rotate_cw()
+    game.place_brick(brick)
+    #     shape = random.choice(list(Shape))
+    #     x = random.randrange(self.field.width - len(shape.value))
+    #     y = 0
+    #     brick = Brick(shape, random.choice(colors), x, y)
+    #     brick.gravity_affected = True
+    #     self.place_brick(brick)
+
 
     game.views += [colorView, consoleView, driver]
     game.loop()
