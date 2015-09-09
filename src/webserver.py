@@ -11,7 +11,7 @@ class WebServer:
         self.logger = logger
 
         self._app = web.Application(loop=self._loop)
-        self._app.router.add_route('GET', '/command', self._handle)
+        self._app.router.add_route('POST', '/command', self._handle)
 
 
     def __enter__(self):
@@ -46,14 +46,43 @@ class WebServer:
 
     @asyncio.coroutine
     def _handle(self, request):
-        color = Color(0.5, 1, 1)
-        brick = Brick(Shape.T, color, 0, 0)
-        brick.gravity_affected = False
-        brick.rotate_cw()
-        if self.game is not None:
-            self.game.place_brick(brick)
-            return web.HTTPOk()
+        command = yield from request.json()
+
+        if self.game is None:
+            return web.HTTPInternalServerError()
+
+        if command["action"] == "add_brick":
+            return self._handle_add_brick(command)
+        if command["action"] == "clear":
+            return self._handle_clear(command)
 
         return web.HTTPNotFound()
 
+    def _handle_clear(self, command):
+        self.game.field.clear()
+
+    def _handle_add_brick(self, command):
+        def mapShape(description):
+            return {
+                'T': Shape.T,
+                'O': Shape.O,
+                'I': Shape.I,
+                'J': Shape.J,
+                'L': Shape.L,
+                'Z': Shape.Z,
+                'S': Shape.S,
+            }.get(description, None)
+
+        self._handle_clear(command)        # TODO: remove
+
+        shape = mapShape(command["shape"])
+        if shape is None:
+            return
         
+        color = Color(0.5, 1, 1)
+        brick = Brick(shape, color, 0, 0)
+        brick.gravity_affected = False
+        brick.rotate_cw()
+        
+        self.game.place_brick(brick)
+        return web.HTTPOk()
