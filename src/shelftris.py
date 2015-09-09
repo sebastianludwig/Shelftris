@@ -154,6 +154,9 @@ class Field:
     def height(self):
         return len(self.field[0])
 
+    def clear(self):
+        self.field = helper.array_2d(self.width, self.height)
+
     def set_all_saturation(self, saturation):
         for (x, y, color) in helper.column_wise(self.field):
             color.saturation = saturation
