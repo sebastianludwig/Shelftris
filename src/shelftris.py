@@ -248,7 +248,6 @@ class Game:
             brick.set_saturation = saturation
 
     def state(self):
-        # TODO cache by tick (which is incremented every update) - or have boolean cache_valid which is set to false every update...mmmh..is caching really an option? This way still all requesting objects would work on the same copy..
         "2D array of Color objects"
         field = copy.deepcopy(self.field)
         for brick in self.bricks:
