@@ -304,8 +304,10 @@ class ColorBlendingView:
         while True:
             now = self._loop.time()
             elapsed_time = now - last_update
+
+            game_state = self.game.state()
             for (x, y, current_color) in helper.column_wise(self.current_state):
-                target_color = self.game.state()[x][y]
+                target_color = game_state[x][y]
                 if self.previous_target[x][y] != target_color:
                     self.blend_progress[x][y] = 0
                     self.previous_target[x][y] = target_color
