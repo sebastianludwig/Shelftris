@@ -11,7 +11,6 @@ from enum import Enum
 # from termcolor import colored
 
 import helper
-from hardware import IKEAShelf
 
 def stringify(container, vertical_border = '', horizontal_border = ''):
     s = ''

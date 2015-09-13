@@ -1,6 +1,8 @@
 import helper
 import yaml
 import asyncio
+import traceback
+from shelftris import Color
 
 if helper.is_raspberry():
     from adafruit import wirebus
@@ -11,11 +13,13 @@ else:
 
 
 class Compartment:
-    def __init__(self, driver, red_outlet, green_outlet, blue_outlet):
+    def __init__(self, driver, red_outlet, green_outlet, blue_outlet, logger=None):
         self.driver = driver
         self.red_outlet = red_outlet
         self.green_outlet = green_outlet
         self.blue_outlet = blue_outlet
+        self.logger = logger
+
         self._color = None
 
     @property
@@ -24,13 +28,17 @@ class Compartment:
 
     @color.setter
     def color(self, new_color):
+        if new_color is None:
+            new_color = Color(0, 0, 0)
+
         if self._color == new_color: return
 
         self._color = new_color
         rgb = self._color.rgb()
-        self.driver.setPWM(self.red_outlet, 0, rgb[0])
+        self.driver.setPWM(self.red_outlet, 0, rgb[0] ** 0.5)
         self.driver.setPWM(self.green_outlet, 0, rgb[1])
-        self.driver.setPWM(self.blue_outlet, 0, rgb[2])
+        self.driver.setPWM(self.blue_outlet, 0, rgb[2] ** 2)
+
 
 class IKEAShelf:
     def __init__(self, loop, view, logger=None):
@@ -68,20 +76,19 @@ class IKEAShelf:
                 if logger is not None:
                     logger.critical("No driver found for at address 0x%02X", dirver_address)
                 return
-            compartment = Compartment(driver, square["red"], square["green"], square["blue"])
+            compartment = Compartment(driver, square["red"], square["green"], square["blue"], logger=self.logger)
             self.compartments[square["position"][0]][square["position"][1]] = compartment
 
     @asyncio.coroutine
     def update(self):
-        last_update = self._loop.time()
         while True:
-            now = self._loop.time()
-            elapsed_time = now - last_update
-
-            for (x, y, color) in helper.row_wise(self.view.state()):
-                if self.compartments[x][y] is not None:
-                    self.compartments[x][y].color = color
-
-            last_update = now
+            try:
+                for (x, y, color) in helper.row_wise(self.view.state()):
+                    if self.compartments[x][y] is not None:
+                        self.compartments[x][y].color = color
+            except Exception as ex:
+                output = traceback.format_exception(ex.__class__, ex, ex.__traceback__)
+                if self.logger is not None:
+                    self.logger.critical(''.join(output))
             yield from asyncio.sleep(self.update_interval)
 

@@ -6,6 +6,7 @@ import logging.config
 import yaml
 
 from shelftris import *
+from hardware import IKEAShelf
 from webserver import WebServer
 
 
