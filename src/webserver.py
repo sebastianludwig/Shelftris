@@ -87,7 +87,7 @@ class WebServer:
         if shape is None:
             return
         
-        color = Color(0.5, 1, 1)
+        color = Color(command["color"]["hue"], command["color"]["saturation"], command["color"]["brightness"])
         brick = Brick(shape, color, command["origin"]["x"], command["origin"]["y"])
         brick.gravity_affected = False
         brick.rotate_cw()
