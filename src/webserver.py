@@ -88,7 +88,7 @@ class WebServer:
             return
         
         color = Color(0.5, 1, 1)
-        brick = Brick(shape, color, 0, 0)
+        brick = Brick(shape, color, command["origin"]["x"], command["origin"]["y"])
         brick.gravity_affected = False
         brick.rotate_cw()
         
