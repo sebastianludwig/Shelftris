@@ -204,6 +204,14 @@ class Game:
 
         asyncio.async(self.update(), loop=loop)
 
+    @property
+    def width(self):
+        return self.field.width
+    
+    @property
+    def height(self):
+        return self.field.height
+
     @asyncio.coroutine
     def update(self):
         while True:
