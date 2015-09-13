@@ -90,7 +90,8 @@ class WebServer:
         color = Color(command["color"]["hue"], command["color"]["saturation"], command["color"]["brightness"])
         brick = Brick(shape, color, command["origin"]["x"], command["origin"]["y"])
         brick.gravity_affected = False
-        brick.rotate_cw()
+        for _ in range(command["rotation"]):
+            brick.rotate_cw()
         
         self.game.place_brick(brick)
         return web.HTTPOk()
