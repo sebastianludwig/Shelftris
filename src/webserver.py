@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from aiohttp import web
 from shelftris import *
 
@@ -46,17 +47,24 @@ class WebServer:
 
     @asyncio.coroutine
     def _handle(self, request):
-        command = yield from request.json()
+        try:
+            command = yield from request.json()
 
-        if self.game is None:
-            return web.HTTPInternalServerError()
+            if self.game is None:
+                return web.HTTPInternalServerError()
 
-        if command["action"] == "add_brick":
-            return self._handle_add_brick(command)
-        if command["action"] == "clear":
-            return self._handle_clear(command)
+            self.logger.info(command)
 
-        return web.HTTPNotFound()
+            if command["action"] == "add_brick":
+                return self._handle_add_brick(command)
+            if command["action"] == "clear":
+                return self._handle_clear(command)
+
+            return web.HTTPNotFound()
+        except Exception as ex:
+            output = traceback.format_exception(ex.__class__, ex, ex.__traceback__)
+            if self.logger is not None:
+                self.logger.critical(''.join(output))
 
     def _handle_clear(self, command):
         self.game.field.clear()
