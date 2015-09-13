@@ -61,7 +61,7 @@ class Color:
         return "h: %.1f s: %.1f b: %.1f" % (self.hue, self.saturation, self.brightness)
 
     def blend_towards(self, target_color, current_progress, new_progress):
-        self.hue = self.__blend_value(self.hue, target_color.hue, current_progress, new_progress)
+        self.hue = self.__blend_hue(self.hue, target_color.hue, current_progress, new_progress)
         self.saturation = self.__blend_value(self.saturation, target_color.saturation, current_progress, new_progress)
         self.brightness = self.__blend_value(self.brightness, target_color.brightness, current_progress, new_progress)
 
@@ -77,6 +77,43 @@ class Color:
         total_difference = target_value - start_value
         step_difference = total_difference * progress_step
         return current_value + step_difference
+
+    def __blend_hue(self, current_value, target_value, current_progress, new_progress):
+        progress_step = new_progress - current_progress
+
+        remaining_cw_difference = target_value - current_value
+        remaining_cw_wrap_difference = target_value + 1 - current_value
+        remaining_ccw_difference = target_value - 1 - current_value
+
+        remaining_difference = self.__abs_min(remaining_cw_difference, remaining_cw_wrap_difference, remaining_ccw_difference)
+
+        remaining_progress = 1.0 - current_progress
+        if remaining_progress < 0.0001:
+            return target_value
+
+        start_value = target_value - (1.0 / remaining_progress * remaining_difference)
+
+        total_cw_difference = target_value - start_value
+        total_cw_wrap_difference = target_value + 1 - start_value
+        total_ccw_difference = target_value - 1 - start_value
+
+        total_difference = self.__abs_min(total_cw_difference, total_cw_wrap_difference, total_ccw_difference)
+
+        step_difference = total_difference * progress_step
+
+        return self.__wrap_1(current_value + step_difference)
+
+    def __abs_min(self, a, b, c):
+        min_ab = a if abs(a) < abs(b) else b
+        min_abc = min_ab if abs(min_ab) < abs(c) else c
+        return min_abc
+
+    def __wrap_1(self, value):
+        if value > 1:
+            return value - 1
+        elif value < 0:
+            return value + 1
+        return value
 
     def rgb(self):
         return colorsys.hsv_to_rgb(self.hue, self.saturation, self.brightness)
@@ -279,7 +316,7 @@ class ColorBlendingView:
         self._loop = loop
         self.game = game
         self.update_interval = 0.05
-        self.blend_time = 15
+        self.blend_time = 2
         self.current_state = game.state()
         self.previous_target = game.state()
         self.blend_progress = game.state()
