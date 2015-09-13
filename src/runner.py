@@ -25,7 +25,7 @@ def main():
     game = Game(loop, 2, 4, logger=logger)
     colorView = ColorBlendingView(loop, game)
     driver = IKEAShelf(loop, colorView, logger=logger)
-    consoleView = ConsoleStateView(loop, game, in_place=True)
+    # consoleView = ConsoleStateView(loop, game, in_place=True)
     
     #     shape = random.choice(list(Shape))
     #     x = random.randrange(self.field.width - len(shape.value))
