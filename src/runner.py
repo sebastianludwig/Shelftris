@@ -24,7 +24,8 @@ def main():
 
     game = Game(loop, 2, 4, logger=logger)
     colorView = ColorBlendingView(loop, game)
-    driver = IKEAShelf(loop, colorView, logger=logger)
+    shelf = IKEAShelf(loop, colorView, logger=logger)
+
     # consoleView = ConsoleStateView(loop, game, in_place=True)
     
     #     shape = random.choice(list(Shape))
@@ -39,6 +40,7 @@ def main():
 
     try:
         with server:
+            shelf.demo_cycle()
             loop.run_forever()
     finally:
         loop.close()

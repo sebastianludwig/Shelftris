@@ -2,6 +2,7 @@ import helper
 import yaml
 import asyncio
 import traceback
+import time
 from shelftris import Color
 
 if helper.is_raspberry():
@@ -78,6 +79,16 @@ class IKEAShelf:
                 return
             compartment = Compartment(driver, square["red"], square["green"], square["blue"], logger=self.logger)
             self.compartments[square["position"][0]][square["position"][1]] = compartment
+
+    def demo_cycle(self):
+        hue_step = 1.0 / (self.view.width * self.view.height)
+        hue = hue_step 
+        for (x, y, color) in helper.column_wise(self.compartments):
+            if self.compartments[x][y] is not None:
+                self.compartments[x][y].color = Color(hue, 1, 1)
+                time.sleep(0.1)
+                hue = hue + hue_step
+        time.sleep(0.5)
 
     @asyncio.coroutine
     def update(self):
