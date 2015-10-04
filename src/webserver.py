@@ -1,5 +1,6 @@
 import asyncio
 import traceback
+import os
 from aiohttp import web
 from shelftris import *
 
@@ -53,8 +54,10 @@ class WebServer:
             if self.game is None:
                 return web.HTTPInternalServerError()
 
-            self.logger.info(command)
+            # self.logger.info(command)
 
+            if command["action"] == "system":
+                return self._handle_system(command)
             if command["action"] == "add_brick":
                 return self._handle_add_brick(command)
             if command["action"] == "clear":
@@ -66,8 +69,17 @@ class WebServer:
             if self.logger is not None:
                 self.logger.critical(''.join(output))
 
+    def _handle_system(self, command):
+        if command["command"] == "shutdown":
+            self._loop.stop()
+            os.system('sudo shutdown -h now')
+            return web.HTTPOk()
+        
+        return web.HTTPBadRequest()
+
     def _handle_clear(self, command):
         self.game.field.clear()
+        return web.HTTPOk()
 
     def _handle_add_brick(self, command):
         shapeMap = {
