@@ -70,8 +70,7 @@ class WebServer:
         self.game.field.clear()
 
     def _handle_add_brick(self, command):
-        def mapShape(description):
-            return {
+        shapeMap = {
                 'T': Shape.T,
                 'O': Shape.O,
                 'I': Shape.I,
@@ -79,13 +78,13 @@ class WebServer:
                 'L': Shape.L,
                 'Z': Shape.Z,
                 'S': Shape.S,
-            }.get(description, None)
+            }
 
         self._handle_clear(command)        # TODO: remove
 
-        shape = mapShape(command["shape"])
+        shape = shapeMap.get(command["shape"], None)
         if shape is None:
-            return
+            return web.HTTPBadRequest()
         
         color = Color(command["color"]["hue"], command["color"]["saturation"], command["color"]["brightness"])
         brick = Brick(shape, color, command["origin"]["x"], command["origin"]["y"])
